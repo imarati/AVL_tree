@@ -1,14 +1,25 @@
 package ru.itis.marat.avl;
 
 /**
- * An implementation of an AVL Tree, which is a self-balancing binary search tree that ensures its height is O(log n).
- * This AVL Tree class provides methods for adding, removing, and searching for nodes in the tree.
+ * The AVLTree class is a self-balancing binary search tree that maintains the heights of its left and right subtrees
+ * to differ by at most one. This implementation includes methods for inserting and deleting nodes, as well as rebalancing
+ * the tree as needed.
  */
+
 public class AVLTree {
 		private Node root;
+		private int insertCounter;
+		private int deleteCounter;
+		private long[][] avgInsert = new long[10000][2];
+		private long[][] avgDelete = new long[10000][2];
+		private long[][] avgSearch = new long[10000][2];
+		private int sizeInsert = 0;
+		private int sizeDelete = 0;
+		private int sizeSearch = 0;
 
 	/**
-	 * Updates the height of a given node by calculating the maximum height of its left and right subtrees.
+	 * Updates the height of the given node based on the heights of its left and right subtrees.
+	 *
 	 * @param node the node whose height should be updated
 	 */
 		private void updateHeight(Node node) {
@@ -16,27 +27,30 @@ public class AVLTree {
 		}
 
 	/**
-	 * Returns the height of a given node, or -1 if the node is null.
+	 * Returns the height of the given node.
+	 *
 	 * @param node the node whose height should be returned
-	 * @return the height of the node
+	 * @return the height of the given node
 	 */
 		private int height(Node node) {
 			return node == null ? -1 : node.height;
 		}
 
 	/**
-	 * Calculates the balance factor of a given node, which is the difference between the height of its right subtree and its left subtree.
-	 * @param node the node whose balance factor should be calculated
-	 * @return the balance factor of the node
+	 * Returns the balance factor of the given node, which is the difference between the heights of its right and left subtrees.
+	 *
+	 * @param node the node whose balance factor should be returned
+	 * @return the balance factor of the given node
 	 */
 		private int getBalance(Node node) {
 			return (node == null) ? 0 : height(node.right) - height(node.left);
 		}
 
 	/**
-	 * Performs a right rotation on a given node and its left child, updating their heights and returning the new root of the subtree.
-	 * @param node the node to rotate
-	 * @return the new root of the subtree
+	 * Performs a single right rotation around the given node to balance the tree.
+	 *
+	 * @param node the node around which to rotate
+	 * @return the new root of the subtree after the rotation
 	 */
 		private Node rotateRight(Node node) {
 			Node temp = node.left;
@@ -48,9 +62,10 @@ public class AVLTree {
 		}
 
 	/**
-	 * Performs a left rotation on a given node and its right child, updating their heights and returning the new root of the subtree.
-	 * @param node the node to rotate
-	 * @return the new root of the subtree
+	 * Performs a single left rotation around the given node to balance the tree.
+	 *
+	 * @param node the node around which to rotate
+	 * @return the new root of the subtree after the rotation
 	 */
 		private Node rotateLeft(Node node) {
 			Node temp = node.right;
@@ -62,9 +77,10 @@ public class AVLTree {
 		}
 
 	/**
-	 * Rebalances a given node by performing one or more rotations, depending on its balance factor.
+	 * Balances the tree by performing rotations as necessary to maintain the AVL property.
+	 *
 	 * @param node the node to rebalance
-	 * @return the new root of the subtree
+	 * @return the new root of the subtree after rebalancing
 	 */
 		private Node rebalance(Node node) {
 			updateHeight(node);
@@ -88,13 +104,32 @@ public class AVLTree {
 		}
 
 	/**
-	 * Inserts a new node with the given key into the AVL Tree, maintaining its balance by rebalancing the tree if necessary.
-	 * @param node the root of the subtree to insert the new node into
-	 * @param key the key value of the new node
-	 * @return the new root of the subtree
-	 * @throws RuntimeException if a node with the same key value already exists in the tree
+	 * Inserts a new node with the given key into the tree and rebalances as necessary.
+	 *
+	 * @param key the key of the new node to insert
+	 * @return the new root of the tree after the insertion
 	 */
-		public Node insert(Node node, int key) {
+		public Node insert(int key) {
+			long time = System.nanoTime();
+			root = insert(root, key);
+			time = System.nanoTime() - time;
+			avgInsert[sizeInsert][0] = time;
+			avgInsert[sizeInsert][1] = insertCounter;
+			insertCounter = 0;
+
+			return root;
+		}
+
+	/**
+	 * Inserts a new node with the given key into the subtree rooted at the given node and rebalances as necessary.
+	 *
+	 * @param node the root of the subtree to insert the new node into
+	 * @param key the key of the new node to insert
+	 * @return the new root of the subtree after the insertion
+	 */
+		private Node insert(Node node, int key) {
+			insertCounter++;
+
 			if (node == null) {
 				return new Node(key);
 			} else if (node.key > key) {
@@ -102,18 +137,74 @@ public class AVLTree {
 			} else if (node.key < key) {
 				node.right = insert(node.right, key);
 			} else {
-				throw new RuntimeException("duplicate Key!");
+				return node;
 			}
 			return rebalance(node);
 		}
 
 	/**
-	 * Deletes a node with the given key from the AVL Tree, maintaining its balance by rebalancing the tree if necessary.
-	 * @param node the root of the subtree to delete the node from
-	 * @param key the key value of the node to delete
-	 * @return the new root of the subtree
+	 * Calculates the average time taken to insert a node into the tree.
+	 *
+	 * @return the average time taken to insert a node into the tree
 	 */
-		public Node delete(Node node, int key) {
+		public long getAvgInsertTime() {
+			long sum = 0;
+			int count = 0;
+			for (int i = 0; i < 10000; i++) {
+				if(avgInsert[i][1] != 0) {
+					sum += avgInsert[i][0];
+					count++;
+				}
+			}
+
+			return sum / count;
+		}
+
+	/**
+	 * Calculates the average number of iterations required to insert a node into the tree.
+	 *
+	 * @return the average number of iterations required to insert a node into the tree
+	 */
+		public int getAvgInsertIteration() {
+			int sum = 0;
+			int count = 0;
+			for (int i = 0; i < 10000; i++) {
+				if(avgInsert[i][1] != 0) {
+					sum += avgInsert[i][1];
+					count++;
+				}
+			}
+
+			return sum / count;
+		}
+
+	/**
+	 * Deletes the node with the given key from the tree and rebalances as necessary.
+	 *
+	 * @param key the key of the node to delete
+	 * @return the new root of the tree after the deletion
+	 */
+		public Node delete(int key) {
+			long time = System.nanoTime();
+			root = delete(root, key);
+			time = System.nanoTime() - time;
+			avgDelete[sizeDelete][0] = time;
+			avgDelete[sizeDelete][1] = deleteCounter;
+			deleteCounter = 0;
+
+			return root;
+		}
+
+	/**
+	 * Deletes the node with the given key from the subtree rooted at the given node and rebalances as necessary.
+	 *
+	 * @param node the root of the subtree to delete the node from
+	 * @param key the key of the node to delete
+	 * @return the new root of the subtree after the deletion
+	 */
+		private Node delete(Node node, int key) {
+			deleteCounter++;
+
 			if (node == null) {
 				return node;
 			} else if (node.key > key) {
@@ -135,6 +226,12 @@ public class AVLTree {
 			return node;
 		}
 
+	/**
+	 * Finds the node with the smallest key in the subtree rooted at the given node.
+	 *
+	 * @param node the root of the subtree to search for the minimum node
+	 * @return the node with the smallest key in the subtree
+	 */
 		private Node findMin(Node node) {
 			while (node.left != null) {
 				node = node.left;
@@ -143,18 +240,93 @@ public class AVLTree {
 		}
 
 	/**
-	 * Finds the node with the given key in the AVL Tree.
-	 * @param key the key value of the node to find
-	 * @return the node with the given key, or null if it does not exist in the tree
+	 * Calculates the average time taken for the delete operation on the AVLTree.
+	 * @return The average time taken for the delete operation.
+	 */
+		public long getAvgDeleteTime() {
+			long sum = 0;
+			int count = 0;
+			for (int i = 0; i < 10000; i++) {
+				if(avgDelete[i][1] != 0) {
+					sum += avgDelete[i][0];
+					count++;
+				}
+			}
+
+			return sum / count;
+		}
+
+	/**
+	 * Calculates the average number of iterations taken for the delete operation on the AVLTree.
+	 * @return The average number of iterations taken for the delete operation.
+	 */
+		public int getAvgDeleteIteration() {
+			int sum = 0;
+			int count = 0;
+			for (int i = 0; i < 10000; i++) {
+				if(avgDelete[i][1] != 0) {
+					sum += avgDelete[i][1];
+					count++;
+				}
+			}
+
+			return sum / count;
+		}
+
+	/**
+	 * Finds the node with the specified key in the AVLTree.
+	 * @param key The key to search for in the AVLTree.
+	 * @return The node with the specified key, or null if the key is not found.
 	 */
 		public Node find(int key) {
+			long time = System.nanoTime();
+			int counter = 0;
 			Node current = root;
 			while (current != null) {
 				if (current.key == key) {
 					break;
 				}
 				current = current.key < key ? current.right : current.left;
+				counter++;
 			}
+
+			time = System.nanoTime() - time;
+			avgSearch[sizeSearch][0] = time;
+			avgSearch[sizeSearch][1] = counter;
 			return current;
+		}
+
+	/**
+	 * Calculates the average time taken for the search operation on the AVLTree.
+	 * @return The average time taken for the search operation.
+	 */
+		public long getAvgSearchTime() {
+			long sum = 0;
+			int count = 0;
+			for (int i = 0; i < 10000; i++) {
+				if(avgSearch[i][1] != 0) {
+					sum += avgSearch[i][0];
+					count++;
+				}
+			}
+
+			return sum / count;
+		}
+
+	/**
+	 * Calculates the average number of iterations taken for the search operation on the AVLTree.
+	 * @return The average number of iterations taken for the search operation.
+	 */
+		public int getAvgSearchIteration() {
+			int sum = 0;
+			int count = 0;
+			for (int i = 0; i < 10000; i++) {
+				if(avgSearch[i][1] != 0) {
+					sum += avgSearch[i][1];
+					count++;
+				}
+			}
+
+			return sum / count;
 		}
 }
